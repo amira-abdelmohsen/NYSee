@@ -17,7 +17,7 @@ env/
 .env
 *.env
 *.json
-NYSee/backend/google-cloud-credentials
+NYSee/backend/google-cloud-credentials/*json
 
 
 # =========================
