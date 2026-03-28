@@ -71,6 +71,19 @@ h1 {
 
 .card-header {
   margin-bottom: 0.9rem;
+  transition: transform 0.2s ease, box-shadow 0.2s ease, background-color 0.2s ease;
+
+}
+
+.card-header:hover {
+  transform: translateY(-2px);
+  box-shadow: 0 8px 18px rgba(0,0,0,0.35);
+  background-color: rgba(128,194,255,0.08);
+  cursor: pointer;
+}
+
+.card-header:hover h2 {
+  color: var(--accent);
 }
 
 .card-header h2 {
