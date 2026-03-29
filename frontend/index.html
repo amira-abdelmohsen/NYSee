@@ -24,7 +24,12 @@
         </div>
 
         <label class="file-label" for="photoInput">Choose image</label>
-        <input id="photoInput" type="file" accept="image/*" capture="environment" />
+        <input
+          id="photoInput"
+          type="file"
+          accept=".jpg,.jpeg,.png,.webp,image/jpeg,image/png,image/webp"
+          capture="environment"
+        />
 
         <img id="preview" alt="Selected image preview" hidden />
 
