@@ -7,62 +7,144 @@
     <link rel="stylesheet" href="./styles.css" />
   </head>
   <body>
-    <main class="app-shell">
+    <a class="skip-link" href="#mainContent">Skip to main content</a>
+
+    <main id="mainContent" class="app-shell">
       <header class="hero">
-        <p class="eyebrow">NYSee</p>
-        <h1>Understand your surroundings in NYC.</h1>
+        <div class="hero-badge">NYSee</div>
+        <h1>Understand your surroundings in New York City.</h1>
         <p class="subtitle">
-          Take a photo to hear what is visible, or use your location to find the nearest
-          accessible pedestrian signal.
+          Take or upload a photo to hear visible text and scene details, or use your
+          location to find the nearest accessible pedestrian signal.
         </p>
       </header>
 
-      <section class="card" aria-labelledby="image-title">
+      <section class="card card-emphasis" aria-labelledby="image-title">
         <div class="card-header">
           <h2 id="image-title">Image analysis</h2>
-          <p>Use your camera or upload a photo of a sign, crossing, or nearby scene.</p>
+          <p>
+            Use your camera or upload a photo of a sign, crossing, street corner, or nearby
+            scene.
+          </p>
         </div>
 
-        <label class="file-label" for="photoInput">Choose image</label>
-        <input
-          id="photoInput"
-          type="file"
-          accept=".jpg,.jpeg,.png,.webp,image/jpeg,image/png,image/webp"
-          capture="environment"
-        />
+        <div class="input-mode-grid">
+          <div class="subcard">
+            <h3>Take a photo</h3>
+            <p class="subtle-text">
+              Open your camera, preview the scene, then capture an image to analyze.
+            </p>
 
-        <img id="preview" alt="Selected image preview" hidden />
+            <div class="actions-row">
+              <button id="openCameraBtn" class="primary-btn" type="button">
+                Open camera
+              </button>
+              <button id="captureBtn" class="secondary-btn" type="button" disabled>
+                Capture photo
+              </button>
+              <button id="closeCameraBtn" class="ghost-btn" type="button" disabled>
+                Close camera
+              </button>
+            </div>
 
-        <div class="actions-row">
-          <button id="analyzeImageBtn" class="primary-btn">Analyze image</button>
+            <div class="camera-shell" id="cameraShell" hidden>
+              <video
+                id="cameraPreview"
+                class="camera-preview"
+                autoplay
+                playsinline
+                muted
+              ></video>
+              <p class="camera-help">
+                Camera preview is on. Press Capture photo when the sign or scene is in view.
+              </p>
+            </div>
+          </div>
+
+          <div class="subcard">
+            <h3>Upload a photo</h3>
+            <p class="subtle-text">
+              Choose an existing JPG, PNG, or WebP image from your device.
+            </p>
+
+            <label class="upload-label" for="photoInput">Choose image file</label>
+            <input
+              id="photoInput"
+              type="file"
+              accept=".jpg,.jpeg,.png,.webp,image/jpeg,image/png,image/webp"
+            />
+          </div>
+        </div>
+
+        <canvas id="captureCanvas" hidden></canvas>
+
+        <div class="preview-shell">
+          <h3 class="preview-title">Selected image</h3>
+          <img id="preview" alt="Selected image preview" hidden />
+          <p id="previewEmpty" class="preview-empty">
+            No image selected yet.
+          </p>
+        </div>
+
+        <div class="actions-row actions-row-spaced">
+          <button id="analyzeImageBtn" class="primary-btn strong-btn" type="button">
+            Analyze image
+          </button>
+          <button id="clearImageBtn" class="ghost-btn" type="button">
+            Clear image
+          </button>
         </div>
       </section>
 
       <section class="card" aria-labelledby="location-title">
         <div class="card-header">
-          <h2 id="location-title">Nearest APS</h2>
-          <p>Use your current location to find the nearest accessible pedestrian signal.</p>
+          <h2 id="location-title">Nearest accessible pedestrian signal</h2>
+          <p>
+            Use your current location to hear the nearest APS, its distance, direction, and
+            intersection name.
+          </p>
         </div>
 
-        <div class="actions-row">
-          <button id="findApsBtn" class="primary-btn">Find nearest APS</button>
+        <div class="actions-row actions-row-spaced">
+          <button id="findApsBtn" class="primary-btn strong-btn" type="button">
+            Find nearest APS
+          </button>
         </div>
       </section>
 
       <section class="card" aria-labelledby="results-title">
         <div class="card-header">
           <h2 id="results-title">Results</h2>
-          <p>Your latest result will also be read aloud.</p>
+          <p>
+            Your latest result appears below and is read aloud automatically.
+          </p>
         </div>
 
-        <div id="status" class="status" aria-live="polite"></div>
-        <div id="result" class="result" aria-live="polite">
+        <div id="status" class="status" role="status" aria-live="polite"></div>
+
+        <div id="result" class="result" tabindex="-1" aria-live="polite">
           No result yet.
         </div>
 
-        <div class="actions-row">
-          <button id="replayBtn" class="secondary-btn" disabled>Replay audio</button>
-          <button id="stopBtn" class="secondary-btn">Stop audio</button>
+        <div id="detailsPanel" class="details-panel" hidden>
+          <div class="details-block">
+            <h3>Detected text</h3>
+            <ul id="textLinesList" class="details-list"></ul>
+          </div>
+
+          <div class="details-block">
+            <h3>Extra details</h3>
+            <ul id="metaList" class="details-list"></ul>
+          </div>
+        </div>
+
+        <div class="actions-row actions-row-spaced">
+          <button id="replayBtn" class="primary-btn strong-btn" type="button" disabled>
+            Replay audio
+          </button>
+          <button id="stopBtn" class="secondary-btn" type="button">
+            Stop audio
+          </button>
         </div>
       </section>
     </main>
