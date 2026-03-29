@@ -1,163 +1,7 @@
-# from __future__ import annotations
-
-# import os
-# from math import atan2, cos, radians, sin, sqrt
-# from typing import Any
-
-# import httpx
-
-# APS_DATASET_URL = os.getenv(
-#     "APS_DATASET_URL",
-#     "https://data.cityofnewyork.us/resource/de3m-c5p4.json",
-# )
-# APS_APP_TOKEN = os.getenv("APS_APP_TOKEN")
-# MAX_ROWS = int(os.getenv("APS_MAX_ROWS", "5000"))
-# NEARBY_THRESHOLD_METERS = float(os.getenv("APS_NEARBY_THRESHOLD_METERS", "100"))
-
-
-
-# def haversine_meters(lat1: float, lng1: float, lat2: float, lng2: float) -> float:
-#     earth_radius_m = 6_371_000
-
-#     dlat = radians(lat2 - lat1)
-#     dlng = radians(lng2 - lng1)
-#     a = (
-#         sin(dlat / 2) ** 2
-#         + cos(radians(lat1)) * cos(radians(lat2)) * sin(dlng / 2) ** 2
-#     )
-#     c = 2 * atan2(sqrt(a), sqrt(1 - a))
-#     return earth_radius_m * c
-
-
-
-# def _safe_float(value: Any) -> float | None:
-#     try:
-#         if value is None or value == "":
-#             return None
-#         return float(value)
-#     except (TypeError, ValueError):
-#         return None
-
-
-
-# def _extract_coords(row: dict[str, Any]) -> tuple[float, float] | None:
-#     # Common Socrata patterns.
-#     location = row.get("location")
-#     if isinstance(location, dict):
-#         lat = _safe_float(location.get("latitude"))
-#         lng = _safe_float(location.get("longitude"))
-#         if lat is not None and lng is not None:
-#             return lat, lng
-
-#         coordinates = location.get("coordinates")
-#         if isinstance(coordinates, list) and len(coordinates) == 2:
-#             lng = _safe_float(coordinates[0])
-#             lat = _safe_float(coordinates[1])
-#             if lat is not None and lng is not None:
-#                 return lat, lng
-
-#     for lat_key, lng_key in [
-#         ("latitude", "longitude"),
-#         ("lat", "lon"),
-#         ("lat", "lng"),
-#     ]:
-#         lat = _safe_float(row.get(lat_key))
-#         lng = _safe_float(row.get(lng_key))
-#         if lat is not None and lng is not None:
-#             return lat, lng
-
-#     return None
-
-
-
-# def _best_name(row: dict[str, Any]) -> str:
-#     candidates = [
-#         row.get("main_st"),
-#         row.get("from_st"),
-#         row.get("to_st"),
-#         row.get("intersection"),
-#         row.get("street_1"),
-#         row.get("street_2"),
-#         row.get("location_name"),
-#         row.get("boro"),
-#     ]
-#     cleaned = [str(item).strip() for item in candidates if item and str(item).strip()]
-
-#     if len(cleaned) >= 2:
-#         return f"{cleaned[0]} and {cleaned[1]}"
-#     if cleaned:
-#         return cleaned[0]
-#     return "Nearest APS location"
-
-
-# async def _fetch_aps_rows() -> list[dict[str, Any]]:
-#     headers = {"Accept": "application/json"}
-#     if APS_APP_TOKEN:
-#         headers["X-App-Token"] = APS_APP_TOKEN
-
-#     params = {"$limit": str(MAX_ROWS)}
-
-#     async with httpx.AsyncClient(timeout=15.0) as client:
-#         response = await client.get(APS_DATASET_URL, params=params, headers=headers)
-#         response.raise_for_status()
-#         data = response.json()
-#         if not isinstance(data, list):
-#             raise RuntimeError("Unexpected APS dataset response shape.")
-#         return data
-
-
-# async def find_nearest_aps(user_lat: float, user_lng: float) -> dict[str, Any]:
-#     rows = await _fetch_aps_rows()
-#     candidates: list[dict[str, Any]] = []
-
-#     for row in rows:
-#         coords = _extract_coords(row)
-#         if not coords:
-#             continue
-
-#         aps_lat, aps_lng = coords
-#         distance = haversine_meters(user_lat, user_lng, aps_lat, aps_lng)
-#         candidates.append(
-#             {
-#                 "name": _best_name(row),
-#                 "distance_meters": round(distance, 1),
-#                 "latitude": aps_lat,
-#                 "longitude": aps_lng,
-#             }
-#         )
-
-#     if not candidates:
-#         return {
-#             "mode": "location_only",
-#             "summary_text": "No APS records with usable coordinates were found.",
-#             "nearest_aps": None,
-#             "nearby": False,
-#         }
-
-#     candidates.sort(key=lambda item: item["distance_meters"])
-#     nearest = candidates[0]
-#     nearby = nearest["distance_meters"] <= NEARBY_THRESHOLD_METERS
-
-#     if nearby:
-#         summary = (
-#             f"The nearest accessible pedestrian signal is {nearest['distance_meters']} meters away "
-#             f"at {nearest['name']}."
-#         )
-#     else:
-#         summary = (
-#             f"The closest accessible pedestrian signal in the dataset is {nearest['distance_meters']} meters away "
-#             f"at {nearest['name']}."
-#         )
-
-#     return {
-#         "mode": "location_only",
-#         "summary_text": summary,
-#         "nearest_aps": nearest,
-#         "nearby": nearby,
-#     }
+from __future__ import annotations
 
 import os
-from math import radians, sin, cos, sqrt, atan2
+from math import radians, sin, cos, sqrt, atan2, degrees
 from typing import Any, Dict, List, Optional, Tuple
 
 import httpx
@@ -167,11 +11,12 @@ APS_DATASET_URL = os.getenv(
     "https://data.cityofnewyork.us/resource/de3m-c5p4.json",
 )
 APS_APP_TOKEN = os.getenv("APS_APP_TOKEN")
+APS_NEARBY_THRESHOLD_METERS = float(os.getenv("APS_NEARBY_THRESHOLD_METERS", "100"))
 
 
 def haversine_meters(lat1: float, lon1: float, lat2: float, lon2: float) -> float:
     """Return distance between two lat/lon points in meters."""
-    r = 6371000  # Earth radius in meters
+    r = 6371000
 
     dlat = radians(lat2 - lat1)
     dlon = radians(lon2 - lon1)
@@ -184,16 +29,43 @@ def haversine_meters(lat1: float, lon1: float, lat2: float, lon2: float) -> floa
     return r * c
 
 
+def initial_bearing_degrees(lat1: float, lon1: float, lat2: float, lon2: float) -> float:
+    """
+    Bearing from point 1 to point 2.
+    0 = north, 90 = east, 180 = south, 270 = west
+    """
+    phi1 = radians(lat1)
+    phi2 = radians(lat2)
+    dlambda = radians(lon2 - lon1)
+
+    x = sin(dlambda) * cos(phi2)
+    y = cos(phi1) * sin(phi2) - sin(phi1) * cos(phi2) * cos(dlambda)
+
+    bearing = degrees(atan2(x, y))
+    return (bearing + 360) % 360
+
+
+def bearing_to_compass(bearing: float) -> str:
+    directions = [
+        "north",
+        "northeast",
+        "east",
+        "southeast",
+        "south",
+        "southwest",
+        "west",
+        "northwest",
+    ]
+    index = round(bearing / 45) % 8
+    return directions[index]
+
+
 def extract_coords(row: Dict[str, Any]) -> Optional[Tuple[float, float]]:
     """
     Extract (lat, lon) from a Socrata row.
-
-    Primary expected format for this APS dataset:
+    Primary expected format:
     - the_geom: { "type": "Point", "coordinates": [lon, lat] }
-
-    Fallbacks are included in case the dataset shape changes.
     """
-    # Primary APS dataset geometry field
     geom = row.get("the_geom")
     if isinstance(geom, dict):
         coords = geom.get("coordinates")
@@ -213,7 +85,6 @@ def extract_coords(row: Dict[str, Any]) -> Optional[Tuple[float, float]]:
             except (TypeError, ValueError):
                 pass
 
-    # Common fallback pattern
     location = row.get("location")
     if isinstance(location, dict):
         lat = location.get("latitude")
@@ -233,7 +104,6 @@ def extract_coords(row: Dict[str, Any]) -> Optional[Tuple[float, float]]:
             except (TypeError, ValueError):
                 pass
 
-    # Direct lat/lon fallback
     lat = row.get("latitude")
     lon = row.get("longitude")
     if lat is not None and lon is not None:
@@ -245,19 +115,23 @@ def extract_coords(row: Dict[str, Any]) -> Optional[Tuple[float, float]]:
     return None
 
 
-def extract_display_name(row: Dict[str, Any]) -> str:
+def extract_intersection_name(row: Dict[str, Any]) -> str:
     """
-    Build a readable label for the APS location.
-    Uses whichever fields are available.
+    The dataset's readable intersection name is in `location`
+    as a string. Fallback to other likely text fields if needed.
     """
+    location_value = row.get("location")
+    if isinstance(location_value, str) and location_value.strip():
+        return location_value.strip()
+
     candidate_fields = [
+        "intersection",
+        "location_name",
         "main_st",
         "from_st",
         "to_st",
         "street_1",
         "street_2",
-        "intersection",
-        "location_name",
         "boro",
         "corner",
     ]
@@ -270,15 +144,14 @@ def extract_display_name(row: Dict[str, Any]) -> str:
 
     if len(present_values) >= 2:
         return f"{present_values[0]} and {present_values[1]}"
-
     if len(present_values) == 1:
         return present_values[0]
 
-    return "Accessible Pedestrian Signal location"
+    return "the nearest APS intersection"
 
 
 async def fetch_aps_rows(limit: int = 5000) -> List[Dict[str, Any]]:
-    headers = {}
+    headers = {"Accept": "application/json"}
     if APS_APP_TOKEN:
         headers["X-App-Token"] = APS_APP_TOKEN
 
@@ -295,6 +168,44 @@ async def fetch_aps_rows(limit: int = 5000) -> List[Dict[str, Any]]:
     return data
 
 
+def build_location_summary(
+    intersection_name: str,
+    distance_meters: float,
+    direction: str,
+    nearby: bool,
+) -> str:
+    if nearby:
+        return (
+            f"The nearest accessible pedestrian signal is {distance_meters} meters away "
+            f"to the {direction}, at {intersection_name}."
+        )
+
+    return (
+        f"The closest accessible pedestrian signal in the dataset is {distance_meters} meters away "
+        f"to the {direction}, at {intersection_name}."
+    )
+
+
+def build_location_spoken_text(
+    intersection_name: str,
+    distance_meters: float,
+    direction: str,
+    nearby: bool,
+) -> str:
+    rounded_distance = round(distance_meters)
+
+    if nearby:
+        return (
+            f"The nearest accessible pedestrian signal is about {rounded_distance} meters away, "
+            f"to the {direction}, at {intersection_name}."
+        )
+
+    return (
+        f"The closest accessible pedestrian signal I found is about {rounded_distance} meters away, "
+        f"to the {direction}, at {intersection_name}."
+    )
+
+
 async def find_nearest_aps(latitude: float, longitude: float) -> Dict[str, Any]:
     rows = await fetch_aps_rows()
 
@@ -307,16 +218,20 @@ async def find_nearest_aps(latitude: float, longitude: float) -> Dict[str, Any]:
 
         aps_lat, aps_lon = coords
         distance_meters = haversine_meters(latitude, longitude, aps_lat, aps_lon)
+        bearing_degrees = initial_bearing_degrees(latitude, longitude, aps_lat, aps_lon)
+        direction = bearing_to_compass(bearing_degrees)
+        intersection_name = extract_intersection_name(row)
 
         candidates.append(
             {
-                "name": extract_display_name(row),
+                "intersection_name": intersection_name,
                 "distance_meters": round(distance_meters, 1),
+                "bearing_degrees": round(bearing_degrees, 1),
+                "direction": direction,
                 "coordinates": {
                     "latitude": aps_lat,
                     "longitude": aps_lon,
                 },
-                "raw_row": row,
             }
         )
 
@@ -324,23 +239,37 @@ async def find_nearest_aps(latitude: float, longitude: float) -> Dict[str, Any]:
         return {
             "mode": "location_only",
             "summary_text": "No APS records with usable coordinates were found.",
+            "spoken_text": "I could not find any accessible pedestrian signal records with usable coordinates.",
             "nearest_aps": None,
             "nearby": False,
         }
 
     candidates.sort(key=lambda item: item["distance_meters"])
     nearest = candidates[0]
-    nearby = nearest["distance_meters"] <= 100
+    nearby = nearest["distance_meters"] <= APS_NEARBY_THRESHOLD_METERS
+
+    summary_text = build_location_summary(
+        nearest["intersection_name"],
+        nearest["distance_meters"],
+        nearest["direction"],
+        nearby,
+    )
+    spoken_text = build_location_spoken_text(
+        nearest["intersection_name"],
+        nearest["distance_meters"],
+        nearest["direction"],
+        nearby,
+    )
 
     return {
         "mode": "location_only",
-        "summary_text": (
-            f"The nearest accessible pedestrian signal is "
-            f"{nearest['distance_meters']} meters away at {nearest['name']}."
-        ),
+        "summary_text": summary_text,
+        "spoken_text": spoken_text,
         "nearest_aps": {
-            "name": nearest["name"],
+            "intersection_name": nearest["intersection_name"],
             "distance_meters": nearest["distance_meters"],
+            "bearing_degrees": nearest["bearing_degrees"],
+            "direction": nearest["direction"],
             "coordinates": nearest["coordinates"],
         },
         "nearby": nearby,
